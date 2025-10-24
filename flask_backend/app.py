@@ -20,7 +20,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
 
 # Initialize Groq client
-client = Groq(api_key="GROQ_API_KEY")  # Replace with your actual Groq API key
+client = Groq(api_key="GROQ_API_KEY")  # Replace with your actual Groq API key 
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -332,18 +332,151 @@ def predict_risk():
     
     return jsonify({'error': 'Invalid file type'}), 400
 
-@app.route('/formats', methods=['GET'])
-def get_supported_formats():
-    """Endpoint to list supported file formats"""
-    return jsonify({
-        'supported_formats': list(ALLOWED_EXTENSIONS),
-        'max_file_size': '50MB'
-    })
+# @app.route('/formats', methods=['GET'])
+# def get_supported_formats():
+#     """Endpoint to list supported file formats"""
+#     return jsonify({
+#         'supported_formats': list(ALLOWED_EXTENSIONS),
+#         'max_file_size': '50MB'
+#     })
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint"""
-    return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
+# @app.route('/health', methods=['GET'])
+# def health_check():
+#     """Health check endpoint"""
+#     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
+@app.route('/personalized_prevention', methods=['POST'])
+def personalized_prevention():
+    """
+    Generate a Personalized Prevention Plan using Groq LLM
+    Input JSON: {"disease": "Type 2 Diabetes", "risk_score": 0.75}
+    Output: structured personalized plan (diet, medication, lifestyle)
+    """
+    try:
+        data = request.get_json()
+        if not data or 'disease' not in data:
+            return jsonify({'error': 'Missing "disease" in request body'}), 400
+
+        disease = data['disease']
+        risk_score = data.get('risk_score', 0.5)  # default moderate
+        risk_level = (
+            "high" if risk_score >= 0.7 else
+            "moderate" if risk_score >= 0.4 else
+            "low"
+        )
+
+        # 🧠 Prompt for LLM
+        prompt = f"""
+        You are a clinical AI generating structured personalized prevention plans.
+        A patient has a {risk_level} risk (probability = {risk_score}) for {disease}.
+        
+        Create a comprehensive, evidence-based prevention plan in strict JSON format.
+        Include:
+        {{
+          "disease": "{disease}",
+          "risk_score": {risk_score},
+          "risk_level": "{risk_level}",
+          "diet_plan": {{
+              "monday": {{"breakfast": "...", "lunch": "...", "dinner": "..."}},
+              "tuesday": {{"breakfast": "...", "lunch": "...", "dinner": "..."}},
+              "wednesday": {{"breakfast": "...", "lunch": "...", "dinner": "..."}},
+              "thursday": {{"breakfast": "...", "lunch": "...", "dinner": "..."}},
+              "friday": {{"breakfast": "...", "lunch": "...", "dinner": "..."}},
+              "saturday": {{"breakfast": "...", "lunch": "...", "dinner": "..."}},
+              "sunday": {{"breakfast": "...", "lunch": "...", "dinner": "..."}}
+          }},
+          "medication_and_monitoring": {{
+              "recommended_meds": ["list of medicines or supplements if any"],
+              "monitoring_schedule": "what to monitor and how often"
+          }},
+          "lifestyle_plan": {{
+              "exercise": "detailed exercise recommendations",
+              "sleep": "sleep hygiene and schedule",
+              "stress_management": "methods or therapy recommendations",
+              "avoid_habits": ["list of avoidances or triggers"]
+          }},
+          "clinical_guidelines_reference": "List key official guidelines or recommendations"
+        }}
+        Ensure the plan is tailored to {risk_level} severity and medically practical.
+        Return **only** valid JSON without any markdown or text.
+        """
+
+        # 🔮 Call Groq LLM
+        chat_completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            temperature=0.3,
+            max_tokens=2000,
+            messages=[
+                {"role": "system", "content": "You are a clinical AI generating structured, evidence-based personalized prevention plans."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        response = chat_completion.choices[0].message.content.strip()
+
+        # 🧹 Clean and parse JSON with better error handling
+        if response.startswith("```json"):
+            response = response[7:]
+        if response.endswith("```"):
+            response = response[:-3]
+        
+        # Remove any leading/trailing whitespace
+        response = response.strip()
+
+        try:
+            plan = json.loads(response)
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}")
+            print(f"Raw response: {response}")
+            # Use fallback plan
+            plan = get_fallback_plan(disease, risk_score, risk_level)
+
+        return jsonify({
+            'status': 'success',
+            'generated_at': datetime.now().isoformat(),
+            'personalized_plan': plan
+        })
+
+    except Exception as e:
+        print(f"Personalized prevention error: {e}")
+        # Use fallback with dynamic disease info
+        fallback_plan = get_fallback_plan(
+            data.get('disease', 'Type 2 Diabetes') if 'data' in locals() else 'Type 2 Diabetes',
+            data.get('risk_score', 0.5) if 'data' in locals() else 0.5,
+            risk_level if 'risk_level' in locals() else 'moderate'
+        )
+        return jsonify({
+            'status': 'fallback',
+            'error': str(e),
+            'personalized_plan': fallback_plan
+        }), 200
+
+def get_fallback_plan(disease, risk_score, risk_level):
+    """Generate a dynamic fallback plan"""
+    return {
+        "disease": disease,
+        "risk_score": risk_score,
+        "risk_level": risk_level,
+        "diet_plan": {
+            "monday": {"breakfast": "Oatmeal with nuts", "lunch": "Brown rice with grilled chicken", "dinner": "Soup and salad"},
+            "tuesday": {"breakfast": "Scrambled eggs, toast", "lunch": "Fish curry, quinoa", "dinner": "Vegetable stir fry"},
+            "wednesday": {"breakfast": "Smoothie with spinach", "lunch": "Dal and vegetables", "dinner": "Light soup"},
+            "thursday": {"breakfast": "Boiled egg, avocado toast", "lunch": "Grilled tofu", "dinner": "Vegetable soup"},
+            "friday": {"breakfast": "Oats and fruit", "lunch": "Lentil curry", "dinner": "Steamed vegetables"},
+            "saturday": {"breakfast": "Green tea, omelette", "lunch": "Salmon and brown rice", "dinner": "Soup"},
+            "sunday": {"breakfast": "Idli and chutney", "lunch": "Vegetable pulao", "dinner": "Fruit salad"}
+        },
+        "medication_and_monitoring": {
+            "recommended_meds": ["Consult doctor for medications", "Vitamin D supplement"],
+            "monitoring_schedule": "Regular health checkups as advised by physician"
+        },
+        "lifestyle_plan": {
+            "exercise": "45 mins brisk walk 5 days/week + strength training twice/week",
+            "sleep": "7-8 hours consistent schedule",
+            "stress_management": "Yoga, meditation, and mindfulness",
+            "avoid_habits": ["Processed foods", "Excessive alcohol", "Smoking", "Sedentary lifestyle"]
+        },
+        "clinical_guidelines_reference": f"Consult latest clinical guidelines for {disease}"
+    }
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
