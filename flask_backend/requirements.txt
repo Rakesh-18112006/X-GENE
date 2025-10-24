@@ -1,0 +1,10 @@
+flask
+werkzeug
+pandas
+numpy
+groq
+pypdf2
+python-multipart
+cython
+biopython
+gunicorn
