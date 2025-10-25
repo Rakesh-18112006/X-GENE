@@ -12,6 +12,7 @@ import Prevention from './pages/Prevention';
 import DriftPatterns from './pages/DriftPatterns';
 import ChatBot from './pages/ChatBot';
 import Profile from './pages/Profile';
+import Upload from './pages/Upload';
 import DashboardLayout from './components/layout/DashboardLayout';
 
 const queryClient = new QueryClient();
@@ -100,6 +101,16 @@ function App() {
             }
           />
           <Route
+            path="/dashboard/upload"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <Upload />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/dashboard/profile"
             element={
               <ProtectedRoute>
@@ -116,22 +127,22 @@ function App() {
         position="top-right"
         toastOptions={{
           style: {
-            background: '#1a1c24',
-            color: '#ffffff',
-            border: '1px solid #2a2d3a',
-            borderRadius: '12px',
-            padding: '16px',
+            background: "#1a1c24",
+            color: "#ffffff",
+            border: "1px solid #2a2d3a",
+            borderRadius: "12px",
+            padding: "16px",
           },
           success: {
             iconTheme: {
-              primary: '#00ff88',
-              secondary: '#1a1c24',
+              primary: "#00ff88",
+              secondary: "#1a1c24",
             },
           },
           error: {
             iconTheme: {
-              primary: '#ff3366',
-              secondary: '#1a1c24',
+              primary: "#ff3366",
+              secondary: "#1a1c24",
             },
           },
         }}

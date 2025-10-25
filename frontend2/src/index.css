@@ -1,10 +1,11 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+
 @import "tailwindcss";
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+
+@layer base {
+  * {
+    @apply m-0 p-0 box-border;
+  }
 
 :root {
   --bg-primary: #0a0b0d;
@@ -190,4 +191,5 @@ a {
   to {
     transform: rotate(360deg);
   }
+}
 }

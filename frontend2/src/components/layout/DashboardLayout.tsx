@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   X,
+  FileArchiveIcon,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -34,6 +35,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { path: '/dashboard/prevention', icon: Shield, label: 'Prevention' },
     { path: '/dashboard/drift', icon: TrendingUp, label: 'Drift Patterns' },
     { path: '/dashboard/chat', icon: MessageCircle, label: 'AI Assistant' },
+    { path: '/dashboard/upload', icon: FileArchiveIcon, label: 'Upload' },
     { path: '/dashboard/profile', icon: User, label: 'Profile' },
   ];
 

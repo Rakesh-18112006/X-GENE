@@ -52,7 +52,7 @@ export const medicalService = {
 
   getReports: async (): Promise<MedicalReport[]> => {
     const { data } = await api.get('/medical/medical-reports');
-    return data;
+    return data.reports;
   },
 };
 

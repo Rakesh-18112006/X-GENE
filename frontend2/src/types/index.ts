@@ -8,6 +8,18 @@ export interface User {
   token?: string;
 }
 
+export interface Risk {
+  risk_name: string;
+  probability: string;
+  reason: string;
+}
+
+export interface UploadResponse {
+  message: string;
+  user: string;
+  identifiedRisks: Risk[];
+}
+
 export interface AuthResponse {
   _id: string;
   name: string;

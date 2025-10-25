@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Upload, FileText, Download, Trash2, Eye } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { medicalService } from '../services/api';
+import { medicalService  } from '../services/api';
 import toast from 'react-hot-toast';
 
 export default function MedicalReports() {
