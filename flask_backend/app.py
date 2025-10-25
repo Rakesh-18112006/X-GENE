@@ -22,7 +22,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
 
 # Initialize Groq client
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))  # Replace with your actual Groq API key
+client = Groq(api_key=os.getenv("API_KEY"))  # Replace with your actual Groq API key
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

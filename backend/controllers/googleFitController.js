@@ -1,19 +1,22 @@
 import { google } from "googleapis";
-import User from "../models/userModel.js";
-import Fitness from "../models/fitnessModel.js";
 import fs from "fs";
+import User from "../models/userModel.js"; // ✅ Make sure this model exists
 
+// ✅ Load credentials safely
 const credentials = JSON.parse(
   fs.readFileSync(new URL("../creds.json", import.meta.url))
 );
 
 const { client_secret, client_id, redirect_uris } = credentials.web;
+
+// ✅ Create OAuth client
 const oAuth2Client = new google.auth.OAuth2(
   client_id,
   client_secret,
   redirect_uris[0]
 );
 
+// ✅ Define required Google Fit scopes
 const SCOPES = [
   "https://www.googleapis.com/auth/fitness.activity.read",
   "https://www.googleapis.com/auth/fitness.blood_glucose.read",
@@ -23,9 +26,10 @@ const SCOPES = [
   "https://www.googleapis.com/auth/fitness.sleep.read",
   "https://www.googleapis.com/auth/fitness.reproductive_health.read",
   "https://www.googleapis.com/auth/userinfo.profile",
+  "https://www.googleapis.com/auth/userinfo.email",
 ];
 
-// Get Google Auth URL
+// ✅ Step 1: Generate Google Auth URL
 const getGoogleAuthUrl = (req, res) => {
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: "offline",
@@ -34,66 +38,95 @@ const getGoogleAuthUrl = (req, res) => {
   res.json({ authUrl });
 };
 
-// Get user profile from Google
+// ✅ Helper: Fetch user profile from Google
 const getUserProfile = async (auth) => {
-  const service = google.people({ version: "v1", auth });
-  const profile = await service.people.get({
-    resourceName: "people/me",
-    personFields: "names,photos,emailAddresses",
-  });
-
-  const displayName = profile.data.names[0].displayName;
-  const url = profile.data.photos[0].url;
-  let userID = profile.data.resourceName;
-  userID = parseInt(userID.replace("people/", ""), 10);
+  const oauth2 = google.oauth2({ version: "v2", auth });
+  const { data } = await oauth2.userinfo.get();
   return {
-    displayName,
-    profilePhotoUrl: url,
-    userID,
+    displayName: data.name,
+    profilePhotoUrl: data.picture,
+    googleId: data.id,
   };
 };
 
-// Handle Google OAuth callback
+// ✅ Step 2: Handle Google OAuth2 callback
 const handleGoogleCallback = async (req, res) => {
   const { code } = req.query;
+  if (!code) {
+    return res.status(400).json({ error: "No authorization code received" });
+  }
 
   try {
+    // Exchange code for tokens
     const { tokens } = await oAuth2Client.getToken(code);
     oAuth2Client.setCredentials(tokens);
-    req.session.tokens = tokens;
 
+    // ✅ Fetch user profile
     const profile = await getUserProfile(oAuth2Client);
-    req.session.userProfile = profile;
 
-    // Save or update user in MongoDB
-    let user = await User.findOne({ googleId: profile.userID });
+    // ✅ Save or update user in MongoDB
+    let user = await User.findOne({ googleId: profile.googleId });
     if (!user) {
       user = await User.create({
         name: profile.displayName,
-        googleId: profile.userID,
+        googleId: profile.googleId,
         profilePhoto: profile.profilePhotoUrl,
       });
     }
 
-    res.redirect("http://localhost:3000/dashboard");
+    // ✅ Save session data
+    if (req.session) {
+      req.session.userProfile = {
+        displayName: profile.displayName,
+        profilePhotoUrl: profile.profilePhotoUrl,
+        userID: profile.googleId,
+      };
+      req.session.tokens = tokens;
+      await new Promise((resolve) => req.session.save(resolve)); // Ensure session is saved
+    }
+
+    // ✅ Optionally store token in cookie as backup
+    res.cookie("googleFitTokens", tokens, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    // ✅ Redirect to frontend dashboard
+    res.redirect("http://localhost:5173/dashboard");
   } catch (error) {
-    console.error("Error retrieving access token:", error);
-    res.redirect("/error");
+    console.error("❌ Error during OAuth callback:", error);
+    res.redirect("http://localhost:5173/error");
   }
 };
 
 // Fetch fitness data from Google Fit
 const fetchFitnessData = async (req, res) => {
   try {
-    const fitness = google.fitness({ version: "v1", auth: oAuth2Client });
-    const userProfile = req.session.userProfile;
+    // Get Google Fit tokens from session or cookie
+    const googleTokens = req.session?.tokens || req.cookies?.googleFitTokens;
 
-    if (!userProfile) {
-      return res.status(401).json({ message: "User not authenticated" });
+    if (!googleTokens) {
+      return res
+        .status(403)
+        .json({ message: "Please connect your Google Fit account first" });
     }
 
-    const user = await User.findOne({ googleId: userProfile.userID });
+    // Set the tokens for this request
+    oAuth2Client.setCredentials(googleTokens);
+
+    const fitness = google.fitness({ version: "v1", auth: oAuth2Client });
+
+    // Get the user from JWT token (handled by your auth middleware)
+    const user = req.user; // This comes from your JWT auth middleware
+
     if (!user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    // Validate that user has connected Google Fit
+    const dbUser = await User.findById(user._id);
+    if (!dbUser) {
       return res.status(404).json({ message: "User not found" });
     }
 
@@ -149,7 +182,74 @@ const fetchFitnessData = async (req, res) => {
             case "derived:com.google.step_count.delta:com.google.android.gms:aggregated":
               formattedEntry.step_count = value[0]?.intVal || 0;
               break;
-            // ... (other cases remain the same)
+            case "derived:com.google.blood_glucose.summary:com.google.android.gms:aggregated":
+              let glucoseLevel = 0;
+              if (point[0]?.value) {
+                point[0].value.forEach((data) => {
+                  if (data.fpVal) {
+                    glucoseLevel = data.fpVal * 10;
+                  }
+                });
+              }
+              formattedEntry.glucose_level = glucoseLevel;
+              break;
+            case "derived:com.google.blood_pressure.summary:com.google.android.gms:aggregated":
+              let finalData = [0, 0];
+              if (point[0]?.value) {
+                point[0].value.forEach((data) => {
+                  if (data.fpVal) {
+                    if (data.fpVal > 100) {
+                      finalData[0] = data.fpVal;
+                    } else if (data.fpVal < 100) {
+                      finalData[1] = data.fpVal;
+                    }
+                  }
+                });
+              }
+              formattedEntry.blood_pressure = finalData;
+              break;
+            case "derived:com.google.heart_rate.summary:com.google.android.gms:aggregated":
+              let heartData = 0;
+              if (point[0]?.value) {
+                point[0].value.forEach((data) => {
+                  if (data.fpVal) {
+                    heartData = data.fpVal;
+                  }
+                });
+              }
+              formattedEntry.heart_rate = heartData;
+              break;
+            case "derived:com.google.weight.summary:com.google.android.gms:aggregated":
+              formattedEntry.weight = value[0]?.fpVal || 0;
+              break;
+            case "derived:com.google.height.summary:com.google.android.gms:aggregated":
+              formattedEntry.height_in_cms = value[0]?.fpVal * 100 || 0;
+              break;
+            case "derived:com.google.sleep.segment:com.google.android.gms:merged":
+              let sleepMillis = 0;
+              point.forEach((sleepPoint) => {
+                const type = sleepPoint.value[0].intVal;
+                if ([2, 3, 4, 6].includes(type)) {
+                  const durationNanos =
+                    sleepPoint.endTimeNanos - sleepPoint.startTimeNanos;
+                  sleepMillis += durationNanos / 1_000_000;
+                }
+              });
+              formattedEntry.sleep_hours = sleepMillis / 3600_000 || 0;
+              break;
+            case "derived:com.google.body.fat.percentage.summary:com.google.android.gms:aggregated":
+              let bodyFat = 0;
+              if (point[0]?.value && point[0].value.length > 0) {
+                bodyFat = point[0].value[0].fpVal;
+              }
+              formattedEntry.body_fat_in_percent = bodyFat;
+              break;
+            case "derived:com.google.menstruation:com.google.android.gms:aggregated":
+              formattedEntry.menstrual_cycle_start =
+                point[0]?.value[0]?.intVal || 0;
+              break;
+            default:
+              break;
           }
         }
       });
@@ -176,9 +276,9 @@ const fetchFitnessData = async (req, res) => {
     }
 
     res.json({
-      userName: userProfile.displayName,
-      profilePhoto: userProfile.profilePhotoUrl,
-      userId: userProfile.userID,
+      userName: user.name,
+      profilePhoto: user.profilePhoto,
+      userId: user._id,
       formattedData,
     });
   } catch (error) {
