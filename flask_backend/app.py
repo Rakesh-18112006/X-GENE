@@ -479,6 +479,67 @@ def get_fallback_plan(disease, risk_score, risk_level):
         },
         "clinical_guidelines_reference": f"Consult latest clinical guidelines for {disease}"
     }
+@app.route('/analyze_lifestyle', methods=['POST'])
+def analyze_lifestyle():
+    """
+    Analyze daily lifestyle and generate a 2-line health summary using Groq LLM.
+    Input JSON example:
+    {
+        "exercise": "30 mins jogging",
+        "water_intake": "2.5L",
+        "diet": "Vegetarian with moderate sugar",
+        "habits": ["No smoking", "Occasional alcohol"],
+        "sleep_hours": 6.5
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Missing lifestyle data"}), 400
+
+        prompt = f"""
+        Summarize the user's daily lifestyle information into exactly 2 concise sentences
+        that reflect overall health quality and early disease prevention implications.
+        Focus on insights relevant to metabolic, cardiac, or stress-related risks.in  more concise 2 sentences only
+
+        Lifestyle Data:
+        {json.dumps(data, indent=2)}
+
+        Output format (plain text, 2 lines only):
+        Line 1: Key lifestyle pattern summary.
+        Line 2: Health impact or early risk insight.
+        """
+
+        chat_completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            temperature=0.4,
+            max_tokens=150,
+            messages=[
+                {"role": "system", "content": "You are a preventive health AI summarizing user lifestyle patterns."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        summary = chat_completion.choices[0].message.content.strip()
+
+        # Enforce 2-line constraint
+        lines = [line.strip() for line in summary.split('\n') if line.strip()]
+        if len(lines) > 2:
+            summary = "\n".join(lines[:2])
+
+        return jsonify({
+            "status": "success",
+            "summary": summary
+        })
+
+    except Exception as e:
+        print(f"Lifestyle summary error: {e}")
+        return jsonify({
+            "status": "fallback",
+            "summary": "Healthy routine with moderate exercise and hydration. Maintain consistency to reduce long-term metabolic and cardiac risks."
+        }), 200
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8000)
