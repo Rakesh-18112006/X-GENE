@@ -13,7 +13,7 @@ const NearbyCare = () => {
     setLoading(true);
     try {
       const { data } = await axios.post(
-        "http://localhost:5000/api/nearby-hospitals",
+        "https://x-gene.onrender.com/api/nearby-hospitals",
         { placeName: place }
       );
       setHospitals(data);
