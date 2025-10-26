@@ -17,6 +17,7 @@ export default function Profile() {
     gender: user?.gender || '',
     phone: user?.phone || '',
   });
+  
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

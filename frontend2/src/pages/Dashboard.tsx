@@ -1,94 +1,134 @@
-import { motion } from 'framer-motion';
-import { Activity, Heart, TrendingUp, AlertCircle, FileText, Calendar } from 'lucide-react';
-import Card from '../components/ui/Card';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { motion } from "framer-motion";
+import {
+  Activity,
+  Heart,
+  TrendingUp,
+  AlertCircle,
+  FileText,
+  Calendar,
+} from "lucide-react";
+import Card from "../components/ui/Card";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { useNavigate } from "react-router";
 
 export default function Dashboard() {
   const healthData = [
-    { date: 'Mon', heartRate: 72, steps: 8200, sleep: 7.2 },
-    { date: 'Tue', heartRate: 68, steps: 9500, sleep: 7.8 },
-    { date: 'Wed', heartRate: 75, steps: 7800, sleep: 6.5 },
-    { date: 'Thu', heartRate: 71, steps: 10200, sleep: 8.1 },
-    { date: 'Fri', heartRate: 69, steps: 11000, sleep: 7.5 },
-    { date: 'Sat', heartRate: 73, steps: 6500, sleep: 8.5 },
-    { date: 'Sun', heartRate: 70, steps: 8900, sleep: 8.0 },
+    { date: "Mon", heartRate: 72, steps: 8200, sleep: 7.2 },
+    { date: "Tue", heartRate: 68, steps: 9500, sleep: 7.8 },
+    { date: "Wed", heartRate: 75, steps: 7800, sleep: 6.5 },
+    { date: "Thu", heartRate: 71, steps: 10200, sleep: 8.1 },
+    { date: "Fri", heartRate: 69, steps: 11000, sleep: 7.5 },
+    { date: "Sat", heartRate: 73, steps: 6500, sleep: 8.5 },
+    { date: "Sun", heartRate: 70, steps: 8900, sleep: 8.0 },
   ];
 
   const stats = [
     {
-      title: 'Heart Rate',
-      value: '72 bpm',
-      change: '+2.5%',
-      trend: 'up',
+      title: "Heart Rate",
+      value: "72 bpm",
+      change: "+2.5%",
+      trend: "up",
       icon: Heart,
-      color: '#00d9ff',
+      color: "#00d9ff",
     },
     {
-      title: 'Daily Steps',
-      value: '8,900',
-      change: '+12%',
-      trend: 'up',
+      title: "Daily Steps",
+      value: "8,900",
+      change: "+12%",
+      trend: "up",
       icon: Activity,
-      color: '#00ff88',
+      color: "#00ff88",
     },
     {
-      title: 'Sleep Quality',
-      value: '8.0 hrs',
-      change: '+5%',
-      trend: 'up',
+      title: "Sleep Quality",
+      value: "8.0 hrs",
+      change: "+5%",
+      trend: "up",
       icon: TrendingUp,
-      color: '#ffaa00',
+      color: "#ffaa00",
     },
     {
-      title: 'Health Score',
-      value: '85/100',
-      change: '-3%',
-      trend: 'down',
+      title: "Health Score",
+      value: "85/100",
+      change: "-3%",
+      trend: "down",
       icon: AlertCircle,
-      color: '#ff3366',
+      color: "#ff3366",
     },
   ];
 
   const recentActivity = [
     {
-      title: 'Medical Report Uploaded',
-      description: 'Blood test results analyzed',
-      time: '2 hours ago',
+      title: "Medical Report Uploaded",
+      description: "Blood test results analyzed",
+      time: "2 hours ago",
       icon: FileText,
     },
     {
-      title: 'Lifestyle Check Completed',
-      description: 'Weekly assessment submitted',
-      time: '1 day ago',
+      title: "Lifestyle Check Completed",
+      description: "Weekly assessment submitted",
+      time: "1 day ago",
       icon: Heart,
     },
     {
-      title: 'Prevention Plan Updated',
-      description: 'New recommendations available',
-      time: '2 days ago',
+      title: "Prevention Plan Updated",
+      description: "New recommendations available",
+      time: "2 days ago",
       icon: Activity,
     },
   ];
+    const navigate = useNavigate();
 
   return (
     <div className="space-y-8">
-      <div>
-        <motion.h1
+      <div className="flex items-center justify-between">
+        <div>
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-4xl font-bold mb-2"
+          >
+            Welcome Back!
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-[#a0a3bd] flex items-center gap-2"
+          >
+            <Calendar className="w-5 h-5" />
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </motion.p>
+        </div>
+
+        <motion.button
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-4xl font-bold mb-2"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            navigate("/dashboard/nearby-care");
+          }}
+          className="px-6 py-3 bg-gradient-to-r from-[#00d9ff] to-[#0099ff] rounded-lg font-medium text-white shadow-lg hover:shadow-[#00d9ff]/20 transition-all duration-300 flex items-center gap-2"
         >
-          Welcome Back!
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-[#a0a3bd] flex items-center gap-2"
-        >
-          <Calendar className="w-5 h-5" />
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </motion.p>
+          <Activity className="w-5 h-5" />
+          Near by Care
+        </motion.button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -111,7 +151,7 @@ export default function Dashboard() {
                   </div>
                   <span
                     className={`text-sm font-medium ${
-                      stat.trend === 'up' ? 'text-[#00ff88]' : 'text-[#ff3366]'
+                      stat.trend === "up" ? "text-[#00ff88]" : "text-[#ff3366]"
                     }`}
                   >
                     {stat.change}
@@ -140,10 +180,10 @@ export default function Dashboard() {
                 <YAxis stroke="#a0a3bd" />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1a1c24',
-                    border: '1px solid #2a2d3a',
-                    borderRadius: '8px',
-                    color: '#ffffff',
+                    backgroundColor: "#1a1c24",
+                    border: "1px solid #2a2d3a",
+                    borderRadius: "8px",
+                    color: "#ffffff",
                   }}
                 />
                 <Line
@@ -151,7 +191,7 @@ export default function Dashboard() {
                   dataKey="heartRate"
                   stroke="#00d9ff"
                   strokeWidth={3}
-                  dot={{ fill: '#00d9ff', r: 4 }}
+                  dot={{ fill: "#00d9ff", r: 4 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -172,10 +212,10 @@ export default function Dashboard() {
                 <YAxis stroke="#a0a3bd" />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1a1c24',
-                    border: '1px solid #2a2d3a',
-                    borderRadius: '8px',
-                    color: '#ffffff',
+                    backgroundColor: "#1a1c24",
+                    border: "1px solid #2a2d3a",
+                    borderRadius: "8px",
+                    color: "#ffffff",
                   }}
                 />
                 <Area
@@ -214,9 +254,13 @@ export default function Dashboard() {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-medium mb-1">{activity.title}</h3>
-                    <p className="text-sm text-[#a0a3bd]">{activity.description}</p>
+                    <p className="text-sm text-[#a0a3bd]">
+                      {activity.description}
+                    </p>
                   </div>
-                  <span className="text-sm text-[#6b6f8a]">{activity.time}</span>
+                  <span className="text-sm text-[#6b6f8a]">
+                    {activity.time}
+                  </span>
                 </motion.div>
               );
             })}
@@ -237,7 +281,9 @@ export default function Dashboard() {
             <div className="flex-1">
               <h3 className="text-lg font-bold mb-1">Health Tip of the Day</h3>
               <p className="text-[#a0a3bd]">
-                Staying hydrated is crucial for maintaining optimal health. Aim for 8 glasses of water daily to support your body's vital functions.
+                Staying hydrated is crucial for maintaining optimal health. Aim
+                for 8 glasses of water daily to support your body's vital
+                functions.
               </p>
             </div>
           </div>

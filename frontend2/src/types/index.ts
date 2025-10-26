@@ -28,15 +28,20 @@ export interface AuthResponse {
 }
 
 export interface MedicalReport {
-  _id: string;
-  userId: string;
-  fileName: string;
-  filePath: string;
+  id: string;
+  originalName: string;
   uploadDate: string;
-  analysis?: {
-    summary: string;
-    keyFindings: string[];
-    recommendations: string[];
+  summary: string;
+  reportType: string;
+  metrics: {
+    glucose: string;
+    cholesterol: string;
+    hdl: string;
+    ldl: string;
+    bloodPressure: string;
+    bmi: string;
+    weight: string;
+    height: string;
   };
 }
 
@@ -56,18 +61,15 @@ export interface LifestyleTrend {
   };
 }
 
+
 export interface PreventionPlan {
-  _id: string;
-  userId: string;
-  generatedAt: string;
-  recommendations: {
-    dietary: string[];
-    exercise: string[];
-    lifestyle: string[];
-    supplements: string[];
-  };
-  riskFactors: string[];
+  dietary?: string[];
+  exercise?: string[];
+  lifestyle?: string[];
+  supplements?: string[];
+  riskFactors?: string[];
 }
+
 
 export interface DriftPattern {
   _id: string;

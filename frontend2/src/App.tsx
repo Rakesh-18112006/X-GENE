@@ -14,6 +14,7 @@ import ChatBot from './pages/ChatBot';
 import Profile from './pages/Profile';
 import Upload from './pages/Upload';
 import DashboardLayout from './components/layout/DashboardLayout';
+import NearbyCare from './pages/NearByCare';
 
 const queryClient = new QueryClient();
 
@@ -106,6 +107,16 @@ function App() {
               <ProtectedRoute>
                 <DashboardLayout>
                   <Upload />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/nearby-care"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <NearbyCare />
                 </DashboardLayout>
               </ProtectedRoute>
             }
