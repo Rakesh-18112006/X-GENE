@@ -3,12 +3,13 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
-import googleFitRoutes from "./routes/googleFitRoutes.js";
 import cors from "cors";
+import hospitalRoutes from "./routes/hospitalRoutes.js";
 import preventionRoutes from "./routes/preventionRoutes.js";
 import lifestyleRoutes from "./routes/lifestyleRoutes.js";
 import medicalReportRoutes from "./routes/medicalReportRoutes.js";
 import driftPatternRoutes from "./routes/driftPatternRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 import path from "path";
 
 dotenv.config();
@@ -35,9 +36,8 @@ app.get("/", (req, res) => {
 
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1", uploadRoutes);
-app.use("/api/v1", googleFitRoutes);
-
-
+app.use("/api", hospitalRoutes);
+app.use("/api/chat", chatRoutes);
 app.use("/api/prevention", preventionRoutes);
 app.use("/api/lifestyle", lifestyleRoutes);
 app.use("/api/medical", medicalReportRoutes);

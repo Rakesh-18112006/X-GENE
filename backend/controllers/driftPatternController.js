@@ -57,18 +57,42 @@ const analyzeDriftPatterns = async (req, res) => {
     Return ONLY valid JSON.
     `;
 
-    const response = await callGroqAPI(prompt, 0.2, 2500);
-
     let analysis;
     try {
+      const response = await callGroqAPI(prompt, 0.2, 2500);
+
+      // Clean and parse the response
       let cleanedResponse = response.trim();
       if (cleanedResponse.startsWith("```json"))
         cleanedResponse = cleanedResponse.slice(7);
       if (cleanedResponse.endsWith("```"))
         cleanedResponse = cleanedResponse.slice(0, -3);
       analysis = JSON.parse(cleanedResponse);
-    } catch (parseError) {
-      console.error("Drift analysis JSON parsing error:", parseError);
+    } catch (error) {
+      console.error("Drift analysis error:", error);
+
+      // Handle rate limit errors specifically
+      if (error?.error?.code === "rate_limit_exceeded") {
+        const retryAfterMinutes = Math.ceil(
+          parseRetryAfterTime(error?.error?.message) / 60
+        );
+        console.log(
+          `Rate limit exceeded. Retry after ${retryAfterMinutes} minutes`
+        );
+
+        return res.status(429).json({
+          error: "Rate limit exceeded",
+          retryAfter: retryAfterMinutes,
+          message:
+            "Analysis temporarily unavailable due to high demand. Please try again later.",
+          fallbackAnalysis: generateSimplifiedAnalysis(
+            lifestyleTrends,
+            medicalReports
+          ),
+        });
+      }
+
+      // For other errors, use fallback
       analysis = getFallbackDriftAnalysis();
     }
 
@@ -174,6 +198,90 @@ const calculateDietQuality = (trends) => {
 };
 
 // ✅ Groq-generated fallback
+// Helper function to parse retry time from error message
+const parseRetryAfterTime = (message) => {
+  try {
+    const match = message.match(/try again in (\d+)m([\d.]+)s/);
+    if (match) {
+      const minutes = parseInt(match[1]);
+      const seconds = parseFloat(match[2]);
+      return minutes * 60 + seconds;
+    }
+    return 1800; // Default 30 minutes if can't parse
+  } catch (err) {
+    return 1800;
+  }
+};
+
+// Simplified analysis based on raw data without AI
+const generateSimplifiedAnalysis = (lifestyleTrends, medicalReports) => {
+  const sleepConsistency = calculateSleepConsistency(lifestyleTrends);
+  const exerciseFrequency = calculateExerciseFrequency(lifestyleTrends);
+  const dietQuality = calculateDietQuality(lifestyleTrends);
+
+  // Determine basic risk level
+  const riskFactors = [];
+  if (sleepConsistency === "poor") riskFactors.push("Poor sleep consistency");
+  if (exerciseFrequency === "low") riskFactors.push("Low exercise frequency");
+  if (dietQuality === "needs_improvement")
+    riskFactors.push("Diet needs improvement");
+
+  const riskLevel =
+    riskFactors.length >= 2
+      ? "high"
+      : riskFactors.length === 1
+      ? "medium"
+      : "low";
+
+  return {
+    health_baseline: {
+      description: "Basic analysis based on recent lifestyle data",
+      parameters: {
+        stable_metrics: ["sleep_pattern", "exercise_routine", "diet_quality"],
+        variable_metrics: [],
+        overall_stability: riskLevel === "low" ? "stable" : "variable",
+      },
+      stable_period: "Last " + lifestyleTrends.length + " days",
+    },
+    early_warnings: riskFactors,
+    visualization_parameters: {
+      charts_needed: ["lifestyle_trends"],
+      key_metrics_to_plot: [
+        "sleep_hours",
+        "exercise_frequency",
+        "diet_quality",
+      ],
+      risk_indicators: [
+        {
+          indicator: "Sleep",
+          status: sleepConsistency,
+          trend: sleepConsistency === "good" ? "stable" : "needs_improvement",
+        },
+        {
+          indicator: "Exercise",
+          status: exerciseFrequency,
+          trend: exerciseFrequency === "high" ? "stable" : "needs_improvement",
+        },
+        {
+          indicator: "Diet",
+          status: dietQuality,
+          trend: dietQuality === "good" ? "stable" : "needs_improvement",
+        },
+      ],
+    },
+    overall_risk_assessment: {
+      level: riskLevel,
+      trend: riskLevel === "low" ? "stable" : "needs_attention",
+      confidence: 0.7,
+    },
+    recommendations: [
+      ...riskFactors.map((factor) => `Address ${factor.toLowerCase()}`),
+      "Continue tracking lifestyle patterns",
+      "Schedule regular health check-ups",
+    ],
+  };
+};
+
 const getFallbackDriftAnalysis = () => ({
   health_baseline: {
     description: "Insufficient data for comprehensive analysis.",

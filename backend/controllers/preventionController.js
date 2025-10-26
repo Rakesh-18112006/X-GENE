@@ -99,15 +99,24 @@ export const personalizedPrevention = async (req, res) => {
 
     let plan;
     try {
-      // Clean JSON
+      // Clean JSON by removing markdown and any extra whitespace
       let cleanedResponse = response.trim();
-      if (cleanedResponse.startsWith("```json")) {
-        cleanedResponse = cleanedResponse.slice(7);
-      }
-      if (cleanedResponse.endsWith("```")) {
-        cleanedResponse = cleanedResponse.slice(0, -3);
-      }
-      plan = JSON.parse(cleanedResponse);
+
+      // Remove markdown code block if present
+      cleanedResponse = cleanedResponse.replace(/^```json\n/, "");
+      cleanedResponse = cleanedResponse.replace(/^```\n/, "");
+      cleanedResponse = cleanedResponse.replace(/\n```$/, "");
+
+      // Remove any potential comments or extra text
+      cleanedResponse = cleanedResponse
+        .split("\n")
+        .filter((line) => {
+          return !line.trim().startsWith("//") && !line.trim().startsWith("#");
+        })
+        .join("\n");
+
+      // Parse the cleaned JSON
+      plan = JSON.parse(cleanedResponse.trim());
     } catch (parseError) {
       console.error("JSON parsing error:", parseError);
       plan = getFallbackPlan(disease, riskScore, riskLevel);
